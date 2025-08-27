@@ -1,15 +1,13 @@
 import Cookies from "js-cookie";
 
-const API_URL = "http://localhost:3000/api"; // đổi theo backend của bạn
+const API_URL = "http://localhost:3000/api";
 
-// Lưu token vào 3 nơi
 function saveToken(token) {
   localStorage.setItem("token", token);
   sessionStorage.setItem("token", token);
-  Cookies.set("token", token, { expires: 1, path: "/" }); // expires: 1 ngày
+  Cookies.set("token", token, { expires: 1, path: "/" });
 }
 
-// Lấy token từ 3 nơi (ưu tiên sessionStorage > localStorage > cookie)
 function getToken() {
   return (
     sessionStorage.getItem("token") ||
@@ -42,13 +40,75 @@ async function register(user) {
   return res.json();
 }
 
-async function getProtected() {
-  const token = getToken();
-  const res = await fetch(`${API_URL}/protected`, {
-    headers: { Authorization: "Bearer " + token },
-  });
-  return res.json();
+function logout() {
+  localStorage.removeItem("token");
+
+  sessionStorage.removeItem("token");
+
+  Cookies.remove("normalToken", { path: "/" });
+
+  return fetch(`${API_URL}/auth/logout`, {
+    method: "POST",
+    credentials: "include"
+  }).then(res => res.json());
 }
 
-export { getProtected, getToken, login, register, saveToken };
+async function refreshToken() {
+  const res = await fetch(`${API_URL}/auth/refresh`, {
+    method: "POST",
+    credentials: "include"
+  });
+
+  if (!res.ok) {
+    throw new Error("Không thể refresh token");
+  }
+
+  const data = await res.json();
+  if (data.accessToken) {
+    saveToken(data.accessToken);
+  }
+  return data;
+}
+
+async function fetchWithAuth(url, options = {}) {
+  let token = getToken();
+
+  const headers = {
+    ...(options.headers || {}),
+    Authorization: token ? `Bearer ${token}` : undefined,
+    "Content-Type": "application/json",
+  };
+
+  let res = await fetch(`${API_URL}${url}`, {
+    ...options,
+    headers,
+    credentials: "include",
+  });
+
+  if (res.status === 401) {
+    try {
+      const refreshRes = await refreshToken();
+      if (refreshRes.accessToken) {
+        token = getToken();
+        const retryHeaders = {
+          ...(options.headers || {}),
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        };
+
+        res = await fetch(`${API_URL}${url}`, {
+          ...options,
+          headers: retryHeaders,
+          credentials: "include",
+        });
+      }
+    } catch (err) {
+      console.error("Refresh token thất bại:", err);
+    }
+  }
+
+  return res;
+}
+
+export { fetchWithAuth, getToken, login, logout, refreshToken, register, saveToken };
 

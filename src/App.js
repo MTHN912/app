@@ -1,18 +1,14 @@
-import { useState } from "react";
-import { getProtected } from "./api";
+import CookieViewer from "../src/document.cookie";
+import { logout } from "./api";
 import Login from "./components/Login";
 import Register from "./components/Register";
 
 function App() {
-  const [protectedData, setProtectedData] = useState("");
 
-  const handleGetProtected = async () => {
-    try {
-      const result = await getProtected();
-      setProtectedData(JSON.stringify(result));
-    } catch (err) {
-      setProtectedData("Lỗi gọi API: " + err.message);
-    }
+  const handleLogout = async () => {
+    await logout();
+    alert("Đăng xuất thành công!");
+    window.location.reload();
   };
 
   return (
@@ -21,8 +17,8 @@ function App() {
       <Register />
       <Login />
       <hr />
-      <button onClick={handleGetProtected}>Gọi API Protected</button>
-      <pre>{protectedData}</pre>
+      <button onClick={handleLogout}>Đăng xuất</button>
+      <CookieViewer />
     </div>
   );
 }
