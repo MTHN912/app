@@ -1,23 +1,28 @@
-import logo from './logo.svg';
-import './App.css';
+import { useState } from "react";
+import { getProtected } from "./api";
+import Login from "./components/Login";
+import Register from "./components/Register";
 
 function App() {
+  const [protectedData, setProtectedData] = useState("");
+
+  const handleGetProtected = async () => {
+    try {
+      const result = await getProtected();
+      setProtectedData(JSON.stringify(result));
+    } catch (err) {
+      setProtectedData("Lỗi gọi API: " + err.message);
+    }
+  };
+
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
+    <div style={{ padding: "20px" }}>
+      <h1>Auth Demo</h1>
+      <Register />
+      <Login />
+      <hr />
+      <button onClick={handleGetProtected}>Gọi API Protected</button>
+      <pre>{protectedData}</pre>
     </div>
   );
 }
